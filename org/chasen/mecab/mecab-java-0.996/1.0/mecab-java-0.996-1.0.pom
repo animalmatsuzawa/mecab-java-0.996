@@ -7,7 +7,7 @@
   <dependencies>
     <dependency>
       <groupId>org.chasen.mecab</groupId>
-      <artifactId>native-platform-x64</artifactId>
+      <artifactId>native-platform-linux-amd64</artifactId>
       <version>1.0</version>
     </dependency>
   </dependencies>
