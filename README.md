@@ -35,7 +35,7 @@ dependencies {
 }
 ```
 
-javaバインディングのためのsoは以下。
+javaバインディングのためのsoは以下のようにロード。
 
 ```java:
 static {
@@ -50,6 +50,7 @@ static {
    return null;
   });
 }
+```
 
 実際のlibMeCab.soはtempファイルとして展開される為、permitionの設定は、"loadLibrary.*"で記述必要。
 
