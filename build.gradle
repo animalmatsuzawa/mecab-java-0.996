@@ -38,13 +38,13 @@ println("$arch")
 
 model {
   platforms {
-    x64 {
+    linux_amd64 {
         architecture "x86_64"
     }
   }
   components {
     MeCab(NativeLibrarySpec) {
-      targetPlatform "x64"
+      targetPlatform "linux_amd64"
       binaries.all {
         cppCompiler.args "-O3", "-c","-fpic", "-I",path, "-I",path+"linux"
         linker.args "-lmecab", "-lstdc++"
@@ -103,9 +103,12 @@ println("jniPom="+"$jniPom")
                     jniPom.version = project.version
                     jniPom.scopeMappings.mappings.clear()
                 }
-
+println("baseName="+"$baseName")
+                def libraryDirectory = project.group.replace('.', '/') + "/$baseName/${variantName}"
+println("libraryDirectory="+"$libraryDirectory")
                 binary.tasks.withType(LinkSharedLibrary) { builderTask ->
-                    nativeJar.into("org/chasen/mecab/platform/$variantName") { from builderTask.outputFile }
+                    //nativeJar.into("org/chasen/mecab/platform/$variantName") { from builderTask.outputFile }
+                    nativeJar.into(libraryDirectory) { from builderTask.outputFile }
                     nativeJar.dependsOn builderTask
                 }
                 project.tasks.test {
