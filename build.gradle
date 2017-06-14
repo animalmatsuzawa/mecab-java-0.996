@@ -1,0 +1,198 @@
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+apply plugin: 'groovy'
+apply plugin: 'cpp'
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'maven'
+
+def path = '/usr/lib/jvm/java-8-openjdk-amd64/include/'
+
+group = 'org.chasen.mecab'
+project.archivesBaseName = 'mecab-java-0.996'
+
+version = '1.0'
+
+allprojects {
+    tasks.withType(Upload) {
+        repositories {
+            mavenDeployer {
+                repository(url: uri("$rootProject.buildDir/repo"))
+            }
+        }
+    }
+}
+configurations {
+    jni
+}
+
+def deployer = uploadJni.repositories.mavenDeployer
+println("deployer="+"$deployer")
+def publications = new LinkedHashSet()
+
+def os = new DefaultNativePlatform("current").operatingSystem
+println("$os")
+def arch = new DefaultNativePlatform("current").architecture
+println("$arch")
+
+model {
+  platforms {
+    x64 {
+        architecture "x86_64"
+    }
+  }
+  components {
+    MeCab(NativeLibrarySpec) {
+      targetPlatform "x64"
+      binaries.all {
+        cppCompiler.args "-O3", "-c","-fpic", "-I",path, "-I",path+"linux"
+        linker.args "-lmecab", "-lstdc++"
+      }
+      sources {
+        cpp {
+          source {
+            srcDir "."
+            include "MeCab_wrap.cxx"
+          }
+//          lib library: "mecab"
+        }
+      }
+    }
+//    mecab(NativeLibrarySpec)
+    all {
+      binaries.all {
+        //buildable = true
+        println("buildable="+"$buildable")
+      }
+
+      binaries.withType(SharedLibraryBinarySpec) { binary ->
+
+                def variantName = targetPlatform.name.replace('_', '-')
+                publications << variantName
+println("variantName="+"$variantName")
+println("publications="+"$publications")
+
+                if (!buildable) {
+                    return
+                }
+
+                def taskName = "jar-${variantName}"
+println("taskName="+"$taskName")
+                def nativeJar = project.tasks.findByName(taskName)
+println("nativeJar="+"$nativeJar")
+                if (nativeJar == null) {
+                    nativeJar = project.tasks.create(taskName, Jar) {
+                        baseName = "$project.archivesBaseName-native-platform-$variantName"
+println("nativeJar.baseName="+"$baseName")
+                    }
+println("nativeJar="+"$nativeJar")
+
+                    artifacts {
+                        jni nativeJar
+//                        runtime nativeJar
+                    }
+
+                    def jniPom = deployer.addFilter(variantName) { artifact, file ->
+println("jniPom.file="+"$file")
+println("jniPom.nativeJar.archivePath="+"$nativeJar.archivePath")
+
+                        return file == nativeJar.archivePath
+                    }
+println("jniPom="+"$jniPom")
+                    jniPom.groupId = project.group
+                    jniPom.artifactId = nativeJar.baseName
+                    jniPom.version = project.version
+                    jniPom.scopeMappings.mappings.clear()
+                }
+
+                binary.tasks.withType(LinkSharedLibrary) { builderTask ->
+                    nativeJar.into("org/chasen/mecab/platform/$variantName") { from builderTask.outputFile }
+                    nativeJar.dependsOn builderTask
+                }
+                project.tasks.test {
+                    dependsOn nativeJar
+                    classpath.from nativeJar
+                }
+      }
+
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+javadoc.options.encoding = 'UTF-8'
+javadoc.options.charSet = 'UTF-8'
+
+sourceSets.main.java {
+  srcDir '.'
+}
+
+
+
+task sourcesJar(type: Jar, dependsOn:classes) {
+     classifier = 'sources'
+     from sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn:javadoc) {
+     classifier = 'javadoc'
+     from javadoc.destinationDir
+}
+println("$project")
+println("$project.buildDir")
+
+artifacts {
+     archives sourcesJar
+     archives javadocJar
+}
+
+
+def mainPom = uploadArchives.repositories.mavenDeployer.pom
+mainPom.groupId = project.group
+mainPom.artifactId = jar.baseName
+mainPom.version = project.version
+mainPom.scopeMappings.mappings.clear()
+mainPom.withXml { provider ->
+    def node = provider.asNode()
+    def deps = node.appendNode('dependencies')
+    publications.each { p ->
+println("p="+"${p}")
+        def dep = deps.appendNode('dependency')
+        dep.appendNode('groupId', project.group)
+        dep.appendNode('artifactId', "native-platform-${p}")
+        dep.appendNode('version', project.version)
+    }
+}
+
+//uploadArchives {
+//    repositories {
+//        mavenDeployer {
+//            repository(url: "file:./maven")
+//        }
+//    }
+//}
