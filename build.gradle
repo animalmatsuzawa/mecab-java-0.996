@@ -5,6 +5,7 @@ apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'maven'
 
+// Javaのjniのinclude
 def path = '/usr/lib/jvm/java-8-openjdk-amd64/include/'
 
 group = 'org.chasen.mecab'
@@ -21,6 +22,7 @@ allprojects {
         }
     }
 }
+
 configurations {
     jni
 }
@@ -53,11 +55,9 @@ model {
             srcDir "."
             include "MeCab_wrap.cxx"
           }
-//          lib library: "mecab"
         }
       }
     }
-//    mecab(NativeLibrarySpec)
     all {
       binaries.all {
         //buildable = true
@@ -88,7 +88,7 @@ println("nativeJar="+"$nativeJar")
 
                     artifacts {
                         jni nativeJar
-//                        runtime nativeJar
+                        runtime nativeJar
                     }
 
                     def jniPom = deployer.addFilter(variantName) { artifact, file ->
